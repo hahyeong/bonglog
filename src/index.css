@@ -1,0 +1,126 @@
+@import "tailwindcss";
+
+/* ── 디자인 토큰 ─────────────────────────────────────────── */
+:root {
+  --h-bg:          #F7F7F5;
+  --h-surface:     #FFFFFF;
+  --h-surface-2:   #F2F1EF;
+  --h-surface-3:   #ECEAE6;
+
+  --h-text-1:      #1A1A18;
+  --h-text-2:      #6B6B67;
+  --h-text-3:      #A8A8A3;
+
+  --h-border:      rgba(0, 0, 0, 0.06);
+  --h-border-md:   rgba(0, 0, 0, 0.10);
+
+  --h-diet:        #2D6A4F;
+  --h-diet-bg:     #EAF4EE;
+  --h-exercise:    #1A5276;
+  --h-exercise-bg: #E8F1F8;
+  --h-weight:      #6C3483;
+  --h-weight-bg:   #F3EAF7;
+  --h-water:       #1A6FA8;
+  --h-water-bg:    #E6F2FA;
+  --h-fast:        #B7490A;
+  --h-fast-bg:     #FDF0E6;
+  --h-period:      #943A60;
+  --h-period-bg:   #FAECF2;
+  --h-supp:        #4A6741;
+  --h-supp-bg:     #EEF4ED;
+
+  --h-shadow-sm:   0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.03);
+  --h-shadow-md:   0 4px 12px rgba(0,0,0,0.06), 0 2px 4px rgba(0,0,0,0.04);
+
+  --h-radius-sm:   8px;
+  --h-radius-md:   12px;
+  --h-radius-lg:   18px;
+}
+
+/* 시스템 다크모드 OR 토글로 직접 설정 */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --h-bg:        #111110;
+    --h-surface:   #1C1C1A;
+    --h-surface-2: #252523;
+    --h-surface-3: #2E2E2B;
+    --h-text-1:    #F0EFE9;
+    --h-text-2:    #9A9A94;
+    --h-text-3:    #606059;
+    --h-border:    rgba(255, 255, 255, 0.06);
+    --h-border-md: rgba(255, 255, 255, 0.10);
+  }
+}
+
+[data-theme='dark'] {
+  --h-bg:        #111110;
+  --h-surface:   #1C1C1A;
+  --h-surface-2: #252523;
+  --h-surface-3: #2E2E2B;
+  --h-text-1:    #F0EFE9;
+  --h-text-2:    #9A9A94;
+  --h-text-3:    #606059;
+  --h-border:    rgba(255, 255, 255, 0.06);
+  --h-border-md: rgba(255, 255, 255, 0.10);
+}
+
+/* ── 리셋 ────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  background: var(--h-bg);
+  color: var(--h-text-1);
+  min-height: 100dvh;
+  overscroll-behavior: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  width: 100%;
+  max-width: 480px;
+  min-height: 100dvh;
+  margin: 0 auto;
+  background: var(--h-bg);
+  display: flex;
+  flex-direction: column;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+input, textarea, select {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  border: none;
+  outline: none;
+  background: none;
+}
+
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+}
+
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
