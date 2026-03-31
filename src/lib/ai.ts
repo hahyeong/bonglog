@@ -1,34 +1,22 @@
 import type { AIParseResult } from '../types'
 
-// ── 설정 ──────────────────────────────────────────────────────
-// .env.local 에 아래 추가:
-//   VITE_ANTHROPIC_API_KEY=sk-ant-...
-//   VITE_AI_MOCK=true   ← 키 없을 때 mock 모드
-
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const env = (import.meta as any).env ?? {}
-const IS_MOCK = env.VITE_AI_MOCK === 'true' || !env.VITE_ANTHROPIC_API_KEY
-const API_KEY = env.VITE_ANTHROPIC_API_KEY ?? ''
-const API_URL = 'https://api.anthropic.com/v1/messages'
+const API_URL = '/api/anthropic/v1/messages'
 const MODEL   = 'claude-sonnet-4-20250514'
 
-if (IS_MOCK) {
-  console.info('[ai] mock 모드 — API 없이 가짜 데이터 반환')
-}
-
 // ── 공통 호출 ─────────────────────────────────────────────────
-async function ask(prompt: string): Promise<string> {
+async function ask(system: string, user: string): Promise<string> {
   const res = await fetch(API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': API_KEY,
-      'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
       model: MODEL,
-      max_tokens: 1024,
-      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 2048,
+      system,
+      messages: [{ role: 'user', content: user }],
     }),
   })
   if (!res.ok) throw new Error(`Anthropic ${res.status}: ${await res.text()}`)
@@ -43,7 +31,7 @@ export interface ParsedDiet {
   carb: number
   protein: number
   fat: number
-  time: string  // "HH:MM"
+  time: string
 }
 
 export interface ParsedExercise {
@@ -54,183 +42,137 @@ export interface ParsedExercise {
   time: string
 }
 
-// ── Mock 헬퍼 ─────────────────────────────────────────────────
-const delay = (ms = 600) => new Promise(r => setTimeout(r, ms))
-
-const DIET_MAP: Record<string, Partial<ParsedDiet>> = {
-  '연어':     { kcal: 180, carb: 5,  protein: 20, fat: 9  },
-  '초밥':     { kcal: 55,  carb: 11, protein: 3,  fat: 1  },
-  '닭가슴살': { kcal: 165, carb: 0,  protein: 31, fat: 4  },
-  '샐러드':   { kcal: 80,  carb: 10, protein: 3,  fat: 3  },
-  '밥':       { kcal: 130, carb: 28, protein: 3,  fat: 0  },
-  '오리고기': { kcal: 220, carb: 0,  protein: 23, fat: 14 },
-  '스테이크': { kcal: 270, carb: 0,  protein: 26, fat: 18 },
-  '피자':     { kcal: 285, carb: 36, protein: 12, fat: 10 },
-  '라면':     { kcal: 500, carb: 70, protein: 12, fat: 18 },
-  '김밥':     { kcal: 320, carb: 55, protein: 10, fat: 7  },
-}
-
-function mockDiet(text: string): ParsedDiet {
-  const now = new Date().toTimeString().slice(0, 5)
-  let kcal = 350, carb = 40, protein = 20, fat = 10
-
-  for (const [key, val] of Object.entries(DIET_MAP)) {
-    if (text.includes(key)) {
-      kcal = val.kcal ?? kcal
-      carb = val.carb ?? carb
-      protein = val.protein ?? protein
-      fat = val.fat ?? fat
-      break
-    }
-  }
-
-  const countMatch = text.match(/(\d+)\s*개/)
-  if (countMatch) {
-    const n = parseInt(countMatch[1])
-    kcal    = Math.round(kcal * n * 0.5)
-    carb    = Math.round(carb * n * 0.5)
-    protein = Math.round(protein * n * 0.5)
-    fat     = Math.round(fat * n * 0.5)
-  }
-
-  let time = now
-  if (text.includes('아침') || text.includes('조식')) time = '08:00'
-  else if (text.includes('점심') || text.includes('중식')) time = '12:30'
-  else if (text.includes('저녁') || text.includes('석식')) time = '18:30'
-
-  return {
-    description: text.replace(/\(.*?\)/g, '').trim().slice(0, 40),
-    kcal, carb, protein, fat, time,
-  }
-}
-
-const EXERCISE_MAP: Record<string, Partial<ParsedExercise>> = {
-  '필라테스': { kcalBurned: 250, intensity: 'mid' },
-  '요가':     { kcalBurned: 180, intensity: 'low' },
-  '런닝':     { kcalBurned: 400, intensity: 'high' },
-  '달리기':   { kcalBurned: 400, intensity: 'high' },
-  '걷기':     { kcalBurned: 150, intensity: 'low' },
-  '수영':     { kcalBurned: 360, intensity: 'high' },
-  '자전거':   { kcalBurned: 300, intensity: 'mid' },
-  '스쿼트':   { kcalBurned: 200, intensity: 'mid' },
-  '헬스':     { kcalBurned: 300, intensity: 'mid' },
-}
-
-function mockExercise(text: string): ParsedExercise {
-  const now = new Date().toTimeString().slice(0, 5)
-  let kcalBurned = 250
-  let intensity: 'low' | 'mid' | 'high' = 'mid'
-  let description = text.trim().slice(0, 40)
-
-  for (const [key, val] of Object.entries(EXERCISE_MAP)) {
-    if (text.includes(key)) {
-      kcalBurned  = val.kcalBurned ?? kcalBurned
-      intensity   = val.intensity ?? intensity
-      description = key
-      break
-    }
-  }
-
-  const minMatch = text.match(/(\d+)\s*분/)
-  const durationMin = minMatch ? parseInt(minMatch[1]) : 30
-  kcalBurned = Math.round(kcalBurned * (durationMin / 30))
-
-  return { description, durationMin, kcalBurned, intensity, time: now }
-}
-
-function mockNL(command: string, context: string): AIParseResult {
-  const entries = (() => { try { return JSON.parse(context) } catch { return [] } })()
-  const isDelete = /삭제|지워|제거/.test(command)
-  const isEdit   = /수정|변경|바꿔|→/.test(command)
-
-  if ((isDelete || isEdit) && entries.length > 0) {
-    const target = entries[0]
-    if (isDelete) {
-      return {
-        intent: { type: 'delete', feature: 'diet', targetId: target.id, changes: {} },
-        confidence: 0.9,
-        message: `"${target.description}" 항목을 삭제했습니다.`,
-      }
-    }
-    const numMatch = command.match(/→\s*(\d+)/)
-    const changes = numMatch
-      ? { description: target.description.replace(/\d+/, numMatch[1]) }
-      : {}
-    return {
-      intent: { type: 'edit', feature: 'diet', targetId: target.id, changes },
-      confidence: 0.85,
-      message: '수정이 완료되었습니다.',
-    }
-  }
-
-  return {
-    intent: { type: 'unknown', raw: command },
-    confidence: 0.3,
-    message: '명령을 이해하지 못했습니다. 다시 입력해주세요.',
-  }
-}
-
-// ── Public API ────────────────────────────────────────────────
+// ── 식단 파싱 ─────────────────────────────────────────────────
 export async function parseDietInput(text: string): Promise<ParsedDiet> {
-  if (IS_MOCK) { await delay(); return mockDiet(text) }
-
   const now = new Date().toTimeString().slice(0, 5)
-  const json = await ask(`사용자가 식단을 입력했습니다: "${text}"
-현재 시각: ${now}
 
-아래 JSON만 반환하세요 (다른 텍스트 없이):
+  const system = `당신은 한국 식품 영양 분석 전문가입니다. 사용자가 먹은 음식을 자연어로 설명하면 각 재료를 정밀하게 분석해서 정확한 영양소를 계산합니다.
+
+## 분석 절차
+1. 사용자 입력에서 모든 재료와 양을 빠짐없이 추출합니다
+2. 각 재료를 개별적으로 분석하고 영양소를 계산합니다
+3. 모든 재료의 영양소를 합산해서 최종 결과를 냅니다
+
+## 영양소 계산 기준
+- 기본 식재료: 한국 식품안전처 식품영양성분 데이터베이스 기준
+- 가공식품 및 브랜드 제품: 반드시 해당 제품의 실제 영양성분표 기준으로 계산합니다. 절대로 일반 식재료 데이터로 대체하지 않습니다
+  - 예: 다향 훈제오리는 100g당 약 370~400kcal로 일반 오리고기(100g당 약 200kcal)와 전혀 다릅니다
+  - 예: 서울우유 더 진한 그릭요거트는 100g당 약 90kcal입니다
+  - 예: 참치캔(동원, 오뚜기 등)은 기름 제거 시 100g당 약 100~120kcal입니다
+- 브랜드 제품 영양성분을 정확히 모를 경우: 동일 카테고리 제품 중 가장 높은 수치를 기준으로 계산합니다 (과소 계산 방지)
+
+## 조리 방법 반영
+- 찌기: 수분이 증가하고 기름이 거의 빠지지 않으므로 칼로리 변화 거의 없음 (±5% 이내)
+- 굽기: 수분 감소로 중량이 줄지만 칼로리 밀도는 높아짐
+- 볶기: 기름 흡수로 칼로리 증가
+- 삶기: 수용성 영양소 일부 손실, 칼로리 변화 거의 없음
+- 기름 제거(참치캔 등): 지방 칼로리 대폭 감소
+
+## 단위 기준
+- 한 줌 = 30~40g (채소류 기준)
+- 한 큰술(큰숟가락) = 15g (액체류 13ml)
+- 한 티스푼(작은숟가락) = 5g
+- 계란 중란 1개 = 60g (흰자 35g, 노른자 17g)
+- 깻잎 1장 = 3g
+- 김 1장(전장) = 2.5g
+- 참치캔 소형 = 총중량 100g, 기름 제거 후 순중량 약 65~70g
+- 사과 중간 크기 1개 = 200g
+- 꿀 1티스푼 = 7g (21kcal)
+- 땅콩버터 1큰술 = 16g (95kcal, 단백질 4g, 지방 8g, 탄수 3g)
+
+## 출력 규칙
+- 반드시 JSON만 반환합니다
+- 설명, 주석, 마크다운 코드블록 등 JSON 외의 텍스트는 절대 포함하지 않습니다
+- 모든 영양소 수치는 정수로 반올림합니다
+- description은 핵심 음식명만 간결하게 명사형으로 작성합니다 (문장 형태 금지)
+  - 좋은 예: "훈제오리 알배추찜 + 스리라차소스"
+  - 나쁜 예: "훈제오리와 알배추를 쪄서 스리라차 소스와 함께 먹었습니다"`
+
+  const user = `현재 시각: ${now}
+사용자 입력: "${text}"
+
+아래 형식의 JSON만 반환하세요:
 {
-  "description": "정제된 음식 설명",
+  "description": "핵심 음식명만 간결하게 명사형으로 요약",
   "kcal": 숫자,
   "carb": 숫자,
   "protein": 숫자,
   "fat": 숫자,
-  "time": "HH:MM"
-}
+  "time": "HH:MM (입력에 시간 언급 있으면 그 시간, 없으면 현재 시각)"
+}`
 
-기준:
-- 칼로리·영양소: 일반 식품 데이터 기반 추정 정수
-- time: 언급 없으면 현재 시각, 아침→08:00, 점심→12:30, 저녁→18:30`)
-
+  const json = await ask(system, user)
   return JSON.parse(json) as ParsedDiet
 }
 
+// ── 운동 파싱 ─────────────────────────────────────────────────
 export async function parseExerciseInput(text: string): Promise<ParsedExercise> {
-  if (IS_MOCK) { await delay(); return mockExercise(text) }
-
   const now = new Date().toTimeString().slice(0, 5)
-  const json = await ask(`사용자가 운동을 입력했습니다: "${text}"
-현재 시각: ${now}
 
-아래 JSON만 반환하세요:
+  const system = `당신은 스포츠 영양 전문가입니다. 사용자가 한 운동을 자연어로 설명하면 정확한 운동 데이터를 분석합니다.
+
+## 분석 절차
+1. 운동 종류, 시간, 강도를 정확히 파악합니다
+2. 소모 칼로리는 MET(대사당량) 기반으로 체중 60kg 기준으로 계산합니다
+3. MET 공식: 칼로리 = MET × 체중(kg) × 시간(h)
+
+## MET 기준값
+- 걷기(보통 속도): 3.5
+- 빠르게 걷기: 4.5
+- 조깅: 7.0
+- 달리기: 9.0
+- 자전거(보통): 6.0
+- 수영: 7.0
+- 필라테스: 3.0
+- 요가: 2.5
+- HIIT: 8.0
+- 헬스(웨이트): 5.0
+- 등산: 6.0
+- 줄넘기: 10.0
+
+## 강도 기준
+- low: 걷기, 스트레칭, 요가 등 심박수 크게 오르지 않는 운동
+- mid: 필라테스, 조깅, 자전거 등 중간 강도
+- high: HIIT, 달리기, 줄넘기 등 고강도
+
+## 출력 규칙
+- 반드시 JSON만 반환합니다
+- 설명, 주석, 마크다운 코드블록 등 JSON 외의 텍스트는 절대 포함하지 않습니다
+- 모든 수치는 정수로 반올림합니다`
+
+  const user = `현재 시각: ${now}
+사용자 입력: "${text}"
+
+아래 형식의 JSON만 반환하세요:
 {
-  "description": "운동 설명",
+  "description": "운동명 간결하게 (예: 필라테스, 런닝)",
   "durationMin": 숫자,
   "kcalBurned": 숫자,
   "intensity": "low" | "mid" | "high",
-  "time": "HH:MM"
-}
+  "time": "HH:MM (입력에 시간 언급 있으면 그 시간, 없으면 현재 시각)"
+}`
 
-기준:
-- kcalBurned: 성인 65kg MET값 기반 정수
-- intensity: low=걷기·스트레칭, mid=필라테스·조깅, high=HIIT·달리기
-- time: 언급 없으면 현재 시각`)
-
+  const json = await ask(system, user)
   return JSON.parse(json) as ParsedExercise
 }
 
+// ── 자연어 수정·삭제 명령 파싱 ───────────────────────────────
 export async function parseNLCommand(
   command: string,
   context: string,
 ): Promise<AIParseResult> {
-  if (IS_MOCK) { await delay(400); return mockNL(command, context) }
+  const system = `당신은 헬스케어 앱의 데이터 관리 도우미입니다. 사용자의 자연어 명령을 분석해서 수행할 작업을 JSON으로 반환합니다.
 
-  const json = await ask(`사용자 명령: "${command}"
+## 출력 규칙
+- 반드시 JSON만 반환합니다
+- 설명, 주석, 마크다운 코드블록 등 JSON 외의 텍스트는 절대 포함하지 않습니다`
+
+  const user = `사용자 명령: "${command}"
 
 현재 데이터:
 ${context}
 
-아래 JSON만 반환하세요:
+아래 형식의 JSON만 반환하세요:
 {
   "intent": {
     "type": "edit" | "delete" | "add" | "unknown",
@@ -240,7 +182,8 @@ ${context}
   },
   "confidence": 0~1,
   "message": "한국어 확인 메시지"
-}`)
+}`
 
+  const json = await ask(system, user)
   return JSON.parse(json) as AIParseResult
 }
