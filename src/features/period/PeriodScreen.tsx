@@ -37,7 +37,6 @@ function SectionHead({ title }: { title: string }) {
 }
 
 const DAYS = ['일', '월', '화', '수', '목', '금', '토']
-const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1)
 
 // 해당 월의 날짜 배열 생성
 function getDaysInMonth(year: number, month: number): (number | null)[] {
@@ -74,9 +73,7 @@ export function PeriodScreen({ date, onBack }: PeriodScreenProps) {
 
   const [year, setYear]   = useState(today.getFullYear())
   const [month, setMonth] = useState(today.getMonth() + 1)
-  const [marked, setMarked] = useState<string[]>(() =>
-    periodStore.getByMonth(year, month).map(e => e.date)
-  )
+  const [, setMarked] = useState<string[]>([])
   const [nlLoading, setNlLoading] = useState(false)
 
   const reload = (y = year, m = month) => {

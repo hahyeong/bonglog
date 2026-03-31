@@ -56,7 +56,7 @@ interface SuppScreenProps {
 export function SuppScreen({ date, onBack }: SuppScreenProps) {
   const { show: toast } = useToast()
   const [defs, setDefs]     = useState<SupplementDef[]>(() => suppStore.getDefs())
-  const [logs, setLogs]     = useState(() => suppStore.getLogsByDate(date))
+  const [, setLogs] = useState(() => suppStore.getLogsByDate(date))
   const [adding, setAdding] = useState(false)
   const [name, setName]     = useState('')
   const [dosage, setDosage] = useState('')

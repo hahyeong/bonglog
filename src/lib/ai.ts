@@ -1,7 +1,6 @@
 import type { AIParseResult } from '../types'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const env = (import.meta as any).env ?? {}
 const API_URL = '/api/anthropic/v1/messages'
 const MODEL   = 'claude-sonnet-4-20250514'
 

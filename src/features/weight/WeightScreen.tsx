@@ -205,7 +205,7 @@ export function WeightScreen({ date, onBack }: WeightScreenProps) {
             <SectionHead title="최근 7일" />
             <div style={{ padding: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 80 }}>
-                {chartData.map((w, i) => {
+                {chartData.map((w, _i) => {
                   const barH = Math.round(((w.kg - minKg) / range) * 50 + 12)
                   const isToday = w.date === date
                   const d = new Date(w.date + 'T00:00:00')
