@@ -1,10 +1,9 @@
 import type { AIParseResult } from '../types'
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const API_URL = import.meta.env.DEV
   ? '/api/anthropic/v1/messages'
   : '/api/anthropic'
-const MODEL   = 'claude-sonnet-4-20250514'
+const MODEL = 'claude-sonnet-4-20250514'
 
 // ── 공통 호출 ─────────────────────────────────────────────────
 async function ask(system: string, user: string): Promise<string> {
@@ -70,16 +69,8 @@ export async function parseDietInput(text: string): Promise<ParsedDiet> {
 - 기름 제거(참치캔 등): 지방 칼로리 대폭 감소
 
 ## 단위 기준
-- 한 줌 = 30~40g (채소류 기준)
-- 한 큰술(큰숟가락) = 15g (액체류 13ml)
-- 한 티스푼(작은숟가락) = 5g
-- 계란 중란 1개 = 60g (흰자 35g, 노른자 17g)
-- 깻잎 1장 = 3g
-- 김 1장(전장) = 2.5g
-- 참치캔 소형 = 총중량 100g, 기름 제거 후 순중량 약 65~70g
-- 사과 중간 크기 1개 = 200g
-- 꿀 1티스푼 = 7g (21kcal)
-- 땅콩버터 1큰술 = 16g (95kcal, 단백질 4g, 지방 8g, 탄수 3g)
+- 사용자가 g, ml 등 정확한 단위로 입력한 경우 그 값을 그대로 사용합니다
+- 모호한 단위(한 줌, 한 스푼 등)는 재료의 특성을 고려해 합리적으로 추정하되 과소 계산하지 않습니다
 
 ## 출력 규칙
 - 반드시 JSON만 반환합니다
